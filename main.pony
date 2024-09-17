@@ -5,8 +5,7 @@ actor Main
       let n = args(1)?.string().u64()?
       let k = args(2)?.string().u64()?
       
-      // find_solutions(env, n, k)
-      let work_unit_size : U64 = 10
+      let work_unit_size : U64 = 100
       Boss(n, k, work_unit_size, env)
     else
       env.out.print("Error failed")
@@ -17,7 +16,7 @@ actor Boss
   let _k : U64
   let _work_unit_size : U64
   var _solutions: Array[U64]
-  var _pending_workers: U64
+  var _workers_remaining: U64
   var _env : Env
 
   new create(n : U64, k : U64, work_unit_size : U64, env: Env) =>
@@ -25,7 +24,7 @@ actor Boss
       _k = k
       _work_unit_size = work_unit_size
       _solutions = Array[U64].create(0)
-      _pending_workers = 0
+      _workers_remaining = 0
       _env = env
       assign_work()
       
@@ -39,24 +38,28 @@ actor Boss
       else
         ending = _n
       end
-      _pending_workers = _pending_workers + 1
+      _workers_remaining = _workers_remaining + 1
       index = index + 1
       Worker(this, start, ending, _k)
       start = ending + 1
     end
   
-  be report_solution(solution : U64) =>
+  be push_solution(solution : U64) =>
     _solutions.push(solution)
   
   be worker_task_finished() =>
-    _pending_workers = _pending_workers - 1
-    if _pending_workers == 0 then
+    _workers_remaining = _workers_remaining - 1
+    if _workers_remaining == 0 then
       display_solutions()
     end
   
   fun display_solutions() =>
-    for name in _solutions.values() do
-      _env.out.print(name.string())
+    if _solutions.size() > 0 then
+      for name in _solutions.values() do
+        _env.out.print(name.string())
+      end
+    else
+      _env.out.print("No output")
     end
 
 actor Worker
@@ -76,7 +79,7 @@ actor Worker
     var i: U64 = _start
     while i <= _end do
       if is_perfect_square_sum(i, _k) then
-        _boss.report_solution(i)
+        _boss.push_solution(i)
       end
       i = i + 1
     end
